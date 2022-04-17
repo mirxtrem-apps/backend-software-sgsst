@@ -8,5 +8,5 @@
 
 Descripción:
 
-Backend desarrollado con Node js + Express usando la tecnologia serverless con Cloud Functions de Firebase. 
-Base de Datos MySQL usando el servicio de Base de datos del hosting del cliente.
+- Backend desarrollado con Node js + Express usando el hosting del cliente. 
+- Base de Datos MySQL usando el servicio de hosting del cliente.

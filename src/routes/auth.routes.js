@@ -13,6 +13,7 @@ authRouter.post("/login", async (req, res) => {
     const response = await query(
       `SELECT * FROM credenciales WHERE correo='${correo}' LIMIT 1`
     );
+
     if (response.length != 0) {
       const db_password = response[0].password;
       const db_activo = response[0].activo;
@@ -21,14 +22,14 @@ authRouter.post("/login", async (req, res) => {
 
       if (password_match) {
         if (db_activo == 1) {
+
+          const userInfo = await query(
+            `SELECT credenciales.id, empresas.nit, empresas.razon_social, roles.rol, credenciales.correo, empresas.direccion, empresas.telefono FROM credenciales INNER JOIN roles ON roles.id = credenciales.rol_id INNER JOIN empresas ON credenciales.id = empresas.credencial_id WHERE credenciales.id= ${response[0].id} LIMIT 1`
+          );
+
           res.status(200).json({
             ok: true,
-            data: {
-              id: response[0].id,
-              correo: response[0].correo,
-              activo: response[0].activo,
-              rol_id: response[0].rol_id,
-            },
+            data: userInfo[0],
             error: "",
           });
         } else {
