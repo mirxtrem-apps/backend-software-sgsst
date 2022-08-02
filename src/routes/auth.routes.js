@@ -4,48 +4,40 @@ var generator = require("generate-password");
 
 const query = require("../helpers/promise_conn");
 const sendEmail = require("../helpers/promise_mail");
+const jwt = require("../helpers/generate_jwt");
+const { JsonWebTokenError } = require("jsonwebtoken");
+
+const auth = require('../controllers/auth_controller');
+
+const authController = auth({query, bcrypt, jwt, sendEmail});
 
 const authRouter = express.Router();
 
-authRouter.post("/login", async (req, res) => {
-  const { correo, password } = req.body;
+authRouter.post("/login", authController.login );
+
+authRouter.post("/registro", authController.registro);
+
+authRouter.get("/confirm-email", async (req, res) => {
+  const { token } = req.headers;
+
   try {
+    const { correo } = await verifyToken(token);
+    console.log(correo);
+
     const response = await query(
       `SELECT * FROM credenciales WHERE correo='${correo}' LIMIT 1`
     );
 
     if (response.length != 0) {
-      const db_password = response[0].password;
-      const db_activo = response[0].activo;
+      await query(`UPDATE credenciales SET activo=1 WHERE correo='${correo}'`);
 
-      const password_match = bcrypt.compareSync(password, db_password);
-
-      if (password_match) {
-        if (db_activo == 1) {
-
-          const userInfo = await query(
-            `SELECT credenciales.id, empresas.nit, empresas.razon_social, roles.rol, credenciales.correo, empresas.direccion, empresas.telefono FROM credenciales INNER JOIN roles ON roles.id = credenciales.rol_id INNER JOIN empresas ON credenciales.id = empresas.credencial_id WHERE credenciales.id= ${response[0].id} LIMIT 1`
-          );
-
-          res.status(200).json({
-            ok: true,
-            data: userInfo[0],
-            error: "",
-          });
-        } else {
-          res.status(403).json({
-            ok: false,
-            data: [],
-            error: "Este usuario esta inactivo.",
-          });
-        }
-      } else {
-        res.status(403).json({
-          ok: false,
-          data: [],
-          error: "Contraseña incorrecta.",
-        });
-      }
+      res.status(200).json({
+        ok: true,
+        data: {
+          message: "Correo verificado.",
+        },
+        error: "",
+      });
     } else {
       return res.status(403).json({
         ok: false,
@@ -54,43 +46,53 @@ authRouter.post("/login", async (req, res) => {
       });
     }
   } catch (error) {
-    return res.json({
+    return res.status(401).json({
       ok: false,
       data: [],
       error: error,
     });
   }
 });
-authRouter.post("/registro", async (req, res) => {
-  const { correo, password } = req.body;
+
+authRouter.post("/resend-email", async (req, res) => {
+  const { correo } = req.body;
+
   try {
     const response = await query(
       `SELECT * FROM credenciales WHERE correo='${correo}' LIMIT 1`
     );
-    if (response.length == 0) {
-      const rol_id = 3;
-      const activo = 1;
-      const encoded_password = bcrypt.hashSync(password, parseInt(12));
-      const response = await query(
-        `INSERT INTO credenciales (correo, password, activo, rol_id) VALUES('${correo}','${encoded_password}',${activo},${rol_id})`
-      );
+
+    if (response.length != 0) {
+      const token = await generarEmailJWT(correo);
+
+      var mailOptions = {
+        from: "soporte@segsas.com",
+        to: correo,
+        subject: "Verificar tu correo | software SGSST",
+        html: `
+          <h1>Solicitud de verificación</h1>
+          <p>Para terminar su registro por favor ingrese en el siguiente link:</p>
+          <a href='http://localhost:4200/confirm-email?auth=${token}'>Verificar mi correo</a>`,
+      };
+
+      await sendEmail(mailOptions);
+
       res.status(200).json({
         ok: true,
         data: {
-          id: response.insertId,
-          message: "Usuario creado con éxito.",
+          message: "Correo de verificación enviado.",
         },
         error: "",
       });
     } else {
-      return res.status(403).json({
+      return res.status(404).json({
         ok: false,
         data: [],
-        error: "Ya existe un usuario con este correo.",
+        error: "No existe un usuario registrado con este correo.",
       });
     }
   } catch (error) {
-    return res.status(400).json({
+    return res.status(401).json({
       ok: false,
       data: [],
       error: error,
@@ -105,9 +107,9 @@ authRouter.post("/:id/change-password", async (req, res) => {
     const response = await query(
       `SELECT * FROM credenciales WHERE id='${id}' LIMIT 1`
     );
+
     if (response.length != 0) {
       const db_password = response[0].password;
-
       const password_match = bcrypt.compareSync(password, db_password);
 
       if (password_match) {

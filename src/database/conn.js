@@ -1,23 +1,19 @@
-require('dotenv').config();
-const mysql = require('mysql');
+require("dotenv").config();
+const mysql = require("mysql");
 
-
-// const connection = mysql.createConnection({
-//     host     : 'localhost',
-//     user     : 'root',
-//     password : '',
-//     database : 'sisgsst'
-// });
 
 const connection = mysql.createConnection({
     host: process.env.HOST,
-    port: process.env.PORT,
+    port: process.env.DB_PORT,
+    // socketPath: `/cloudsql/${process.env.INSTANCE_CONNECTION_NAME}`,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DATABASE,
-  });
+    connectTimeout: 10000,
+});
 
-connection.connect(function(error) {
+connection.connect((error) => {
+
     if (error) {
         throw error;
     } else {

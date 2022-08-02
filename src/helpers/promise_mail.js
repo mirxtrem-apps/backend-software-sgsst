@@ -12,7 +12,7 @@ var transporter = nodemailer.createTransport({
 
 const sendEmail = (mailOptions) => {
   return new Promise((resolve, reject) => {
-
+    
     transporter.sendMail(mailOptions, function (error, info) {
       if (error) {
         console.log('Error:' + error);
