@@ -29,7 +29,9 @@ const authController = ({ query, bcrypt, jwt, sendEmail }) => ({
 
               return res.status(200).json({
                 data: {
+                  usuario: empresas[0],
                   token,
+                  admin,
                 },
                 message: "",
               });
@@ -91,7 +93,7 @@ const authController = ({ query, bcrypt, jwt, sendEmail }) => ({
           html: `
             <h1>Bienvenido!</h1>
             <p>Gracias por usar el software SG-SST, para terminar su registro por favor ingrese en el siguiente link:</p>
-            <a href='http://localhost:4200/confirm-email?auth=${token}'>Verificar mi correo</a>`,
+            <a href='https://software-sgsst.web.app/confirm-email?auth=${token}'>Verificar mi correo</a>`,
         };
         // https://software-sgsst.web.app
   

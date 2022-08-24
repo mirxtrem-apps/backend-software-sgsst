@@ -5,7 +5,6 @@ var generator = require("generate-password");
 const query = require("../helpers/promise_conn");
 const sendEmail = require("../helpers/promise_mail");
 const jwt = require("../helpers/generate_jwt");
-const { JsonWebTokenError } = require("jsonwebtoken");
 
 const auth = require('../controllers/auth_controller');
 
@@ -19,14 +18,16 @@ authRouter.post("/registro", authController.registro);
 
 authRouter.get("/confirm-email", async (req, res) => {
   const { token } = req.headers;
-
+  
   try {
-    const { correo } = await verifyToken(token);
+    const { correo } = await jwt.verifyToken(token);
     console.log(correo);
 
     const response = await query(
       `SELECT * FROM credenciales WHERE correo='${correo}' LIMIT 1`
     );
+
+    console.log(response);
 
     if (response.length != 0) {
       await query(`UPDATE credenciales SET activo=1 WHERE correo='${correo}'`);
@@ -46,6 +47,7 @@ authRouter.get("/confirm-email", async (req, res) => {
       });
     }
   } catch (error) {
+    console.log(error);
     return res.status(401).json({
       ok: false,
       data: [],
